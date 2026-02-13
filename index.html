@@ -10,89 +10,73 @@
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #222; }
         .file-info { display: flex; align-items: center; gap: 12px; flex: 1; cursor: pointer; }
         .dots { font-size: 30px; padding: 0 15px; color: #666; cursor: pointer; }
-        
-        /* Мобильное меню снизу */
-        #menu { 
-            position: fixed; bottom: 0; left: 0; width: 100%; background: #1a1a1a; 
-            border-top: 3px solid #007bff; border-radius: 20px 20px 0 0; 
-            display: none; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
-        }
+        #menu { position: fixed; bottom: 0; left: 0; width: 100%; background: #1a1a1a; border-top: 3px solid #007bff; border-radius: 20px 20px 0 0; display: none; z-index: 1000; }
         .menu-btn { padding: 18px; text-align: center; border-bottom: 1px solid #222; font-size: 18px; cursor: pointer; }
         .menu-btn.delete { color: #ff4d4d; }
-        .menu-btn:active { background: #333; }
     </style>
 </head>
 <body>
 
 <header>
     <div style="font-weight:bold; font-size:20px;">NASHA DRIVE</div>
-    <button onclick="addFolder()" style="background:#007bff; color:#fff; border:none; padding:10px 15px; border-radius:8px; cursor:pointer;">+ ПАПКА</button>
+    <input type="file" id="fileInput" style="display:none;" onchange="handleUpload(this)">
+    <button onclick="document.getElementById('fileInput').click()" style="background:#007bff; color:#fff; border:none; padding:10px 15px; border-radius:8px; cursor:pointer;">ЗАГРУЗИТЬ ФАЙЛ</button>
 </header>
 
 <div id="fileList"></div>
 
 <div id="menu">
-    <div class="menu-btn" onclick="execute('open')">Открыть / Воспроизвести</div>
+    <div class="menu-btn" onclick="execute('open')">Открыть</div>
     <div class="menu-btn" onclick="execute('rename')">Переименовать</div>
-    <div class="menu-btn" onclick="execute('move')">Переместить</div>
-    <div class="menu-btn" onclick="execute('replace')">Заменить</div>
     <div class="menu-btn delete" onclick="execute('delete')">Удалить</div>
     <div class="menu-btn" onclick="closeMenu()" style="background:#000;">ОТМЕНА</div>
 </div>
 
 <script>
-let currentFile = null;
+let currentFileIndex = null;
+// Загружаем сохраненные файлы из памяти или создаем пустой массив
+let myFiles = JSON.parse(localStorage.getItem('nasha_files')) || [];
 
-// БАЗА: Поддержка всех форматов (Видео, Фото, Аудио, PDF, Архивы)
-const myFiles = [
-    { name: "Мой_Фильм.mp4", url: "https://www.w3schools.com/html/mov_bbb.mp4" },
-    { name: "Фото_Профиля.jpg", url: "https://via.placeholder.com/300" },
-    { name: "Документ.pdf", url: "#" },
-    { name: "Музыка.mp3", url: "#" },
-    { name: "Архив.zip", url: "#" }
-];
-
-// Умные иконки
 function getIcon(name) {
     const ext = name.split('.').pop().toLowerCase();
-    if (['mp4','mov','avi','mkv','webm'].includes(ext)) return "🎬";
-    if (['mp3','wav','ogg','flac'].includes(ext)) return "🎵";
-    if (['jpg','jpeg','png','gif','webp'].includes(ext)) return "🖼️";
+    if (['mp4','mov','avi'].includes(ext)) return "🎬";
+    if (['jpg','png','webp'].includes(ext)) return "🖼️";
     if (ext === 'pdf') return "📕";
-    if (['zip','rar','7z','tar'].includes(ext)) return "📦";
-    if (['txt','js','html','css'].includes(ext)) return "📝";
     return "📄";
 }
 
 function render() {
     const list = document.getElementById('fileList');
-    list.innerHTML = "";
+    list.innerHTML = myFiles.length === 0 ? '<p style="text-align:center; opacity:0.5; margin-top:50px;">Файлов пока нет. Загрузи что-нибудь!</p>' : "";
     myFiles.forEach((file, i) => {
         let div = document.createElement('div');
         div.className = 'file-item';
         div.innerHTML = `
-            <div class="file-info" onclick="openFile(${i})">
+            <div class="file-info" onclick="window.open('${file.url}', '_blank')">
                 <span style="font-size:24px;">${getIcon(file.name)}</span>
-                <span>${file.name}</span>
+                <span style="word-break: break-all;">${file.name}</span>
             </div>
             <div class="dots" onclick="openOptions(event, ${i})">⋮</div>
         `;
         list.appendChild(div);
     });
+    localStorage.setItem('nasha_files', JSON.stringify(myFiles));
 }
 
-function openFile(i) {
-    const file = myFiles[i];
-    if (file.url !== "#") {
-        window.open(file.url, '_blank');
-    } else {
-        alert("Файл '" + file.name + "' пока не имеет ссылки на Google Диск");
+function handleUpload(input) {
+    const file = input.files[0];
+    if (file) {
+        if (file.name.length > 93050) return alert("Имя файла слишком длинное!");
+        // Создаем временную ссылку для просмотра
+        const url = URL.createObjectURL(file);
+        myFiles.push({ name: file.name, url: url });
+        render();
     }
 }
 
 function openOptions(e, i) {
     e.stopPropagation();
-    currentFile = i;
+    currentFileIndex = i;
     document.getElementById('menu').style.display = 'block';
 }
 
@@ -101,30 +85,26 @@ function closeMenu() {
 }
 
 function execute(action) {
-    const file = myFiles[currentFile];
-    if (action === 'open') openFile(currentFile);
-    if (action === 'rename') {
-        let n = prompt("Новое имя (Лимит 93050):", file.name);
-        if (n && n.length <= 93050) { file.name = n; render(); }
-    }
     if (action === 'delete') {
-        if(confirm("Удалить файл навсегда?")) { myFiles.splice(currentFile, 1); render(); }
+        myFiles.splice(currentFileIndex, 1);
+        render();
     }
-    if (action === 'move' || action === 'replace') alert("Функция переезда файла активна для 15GB");
+    if (action === 'rename') {
+        let n = prompt("Новое имя:", myFiles[currentFileIndex].name);
+        if (n && n.length <= 93050) {
+            myFiles[currentFileIndex].name = n;
+            render();
+        }
+    }
+    if (action === 'open') {
+        window.open(myFiles[currentFileIndex].url, '_blank');
+    }
     closeMenu();
 }
 
-function addFolder() {
-    let n = prompt("Имя папки (Лимит 93050):");
-    if (n && n.length <= 93050) {
-        myFiles.push({name: "📁 " + n, url: "#"});
-        render();
-    }
-}
+window.onclick = (e) => { if (e.target.id !== 'menu') closeMenu(); };
 
-// Стартуем
 render();
 </script>
-
 </body>
 </html>
