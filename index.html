@@ -3,106 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NASHA DRIVE 15GB</title>
+    <title>NASHA DRIVE CORE</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
-        header { padding: 20px; background: #111; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; }
+        header { padding: 20px; background: #111; display: flex; justify-content: space-between; border-bottom: 2px solid #007bff; }
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #222; }
-        .file-info { display: flex; align-items: center; gap: 12px; flex: 1; cursor: pointer; }
-        .dots { font-size: 30px; padding: 0 15px; color: #666; cursor: pointer; }
-        #menu { position: fixed; bottom: 0; left: 0; width: 100%; background: #1a1a1a; border-top: 3px solid #007bff; border-radius: 20px 20px 0 0; display: none; z-index: 1000; }
-        .menu-btn { padding: 18px; text-align: center; border-bottom: 1px solid #222; font-size: 18px; cursor: pointer; }
-        .menu-btn.delete { color: #ff4d4d; }
+        .dots { font-size: 30px; padding: 10px; color: #666; cursor: pointer; }
+        #menu { position: fixed; bottom: 0; left:0; width: 100%; background: #1a1a1a; border-top: 3px solid #007bff; display: none; z-index: 1000; }
+        .menu-btn { padding: 18px; text-align: center; border-bottom: 1px solid #222; cursor: pointer; font-size: 18px; }
+        .danger { color: #ff4d4d; }
     </style>
 </head>
 <body>
 
 <header>
-    <div style="font-weight:bold; font-size:20px;">NASHA DRIVE</div>
-    <input type="file" id="fileInput" style="display:none;" onchange="handleUpload(this)">
-    <button onclick="document.getElementById('fileInput').click()" style="background:#007bff; color:#fff; border:none; padding:10px 15px; border-radius:8px; cursor:pointer;">ЗАГРУЗИТЬ ФАЙЛ</button>
+    <strong>NASHA DRIVE (15GB)</strong>
+    <input type="file" id="fileLoader" style="display:none;" onchange="startUpload(this)">
+    <button onclick="document.getElementById('fileLoader').click()" style="background:#007bff; color:#fff; border:none; padding:10px 15px; border-radius:8px; cursor:pointer;">ЗАГРУЗИТЬ ФАЙЛ</button>
 </header>
 
 <div id="fileList"></div>
 
 <div id="menu">
-    <div class="menu-btn" onclick="execute('open')">Открыть</div>
+    <div class="menu-btn" onclick="execute('open')">Открыть / Воспроизвести</div>
     <div class="menu-btn" onclick="execute('rename')">Переименовать</div>
-    <div class="menu-btn delete" onclick="execute('delete')">Удалить</div>
+    <div class="menu-btn danger" onclick="execute('delete')">Удалить</div>
     <div class="menu-btn" onclick="closeMenu()" style="background:#000;">ОТМЕНА</div>
 </div>
 
 <script>
-let currentFileIndex = null;
-// Загружаем сохраненные файлы из памяти или создаем пустой массив
-let myFiles = JSON.parse(localStorage.getItem('nasha_files')) || [];
-
-function getIcon(name) {
-    const ext = name.split('.').pop().toLowerCase();
-    if (['mp4','mov','avi'].includes(ext)) return "🎬";
-    if (['jpg','png','webp'].includes(ext)) return "🖼️";
-    if (ext === 'pdf') return "📕";
-    return "📄";
-}
+let currentFile = null;
+let files = JSON.parse(localStorage.getItem('nasha_core_files')) || [];
 
 function render() {
     const list = document.getElementById('fileList');
-    list.innerHTML = myFiles.length === 0 ? '<p style="text-align:center; opacity:0.5; margin-top:50px;">Файлов пока нет. Загрузи что-нибудь!</p>' : "";
-    myFiles.forEach((file, i) => {
+    list.innerHTML = files.length ? "" : '<div style="padding:50px; text-align:center; opacity:0.3;">ДИСК ПУСТ</div>';
+    files.forEach((f, i) => {
+        const ext = f.name.split('.').pop().toLowerCase();
+        let icon = "📄";
+        if (['mp4','mov','avi'].includes(ext)) icon = "🎬";
+        if (['jpg','png'].includes(ext)) icon = "🖼️";
+
         let div = document.createElement('div');
         div.className = 'file-item';
         div.innerHTML = `
-            <div class="file-info" onclick="window.open('${file.url}', '_blank')">
-                <span style="font-size:24px;">${getIcon(file.name)}</span>
-                <span style="word-break: break-all;">${file.name}</span>
+            <div style="flex:1; cursor:pointer;" onclick="window.open('${f.data}','_blank')">
+                <span style="font-size:20px; margin-right:10px;">${icon}</span>
+                <span>${f.name}</span>
             </div>
             <div class="dots" onclick="openOptions(event, ${i})">⋮</div>
         `;
         list.appendChild(div);
     });
-    localStorage.setItem('nasha_files', JSON.stringify(myFiles));
+    localStorage.setItem('nasha_core_files', JSON.stringify(files));
 }
 
-function handleUpload(input) {
+function startUpload(input) {
     const file = input.files[0];
-    if (file) {
-        if (file.name.length > 93050) return alert("Имя файла слишком длинное!");
-        // Создаем временную ссылку для просмотра
-        const url = URL.createObjectURL(file);
-        myFiles.push({ name: file.name, url: url });
+    if (!file) return;
+    if (file.name.length > 93050) return alert("Лимит имени превышен!");
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        // Мы сохраняем файл в "мозги" сайта
+        files.push({
+            name: file.name,
+            data: e.target.result // Сохраняем как Base64 (чтобы не пропадал)
+        });
         render();
-    }
+    };
+    reader.readAsDataURL(file);
 }
 
 function openOptions(e, i) {
     e.stopPropagation();
-    currentFileIndex = i;
+    currentFile = i;
     document.getElementById('menu').style.display = 'block';
 }
 
-function closeMenu() {
-    document.getElementById('menu').style.display = 'none';
-}
+function closeMenu() { document.getElementById('menu').style.display = 'none'; }
 
 function execute(action) {
-    if (action === 'delete') {
-        myFiles.splice(currentFileIndex, 1);
-        render();
-    }
+    if (action === 'open') window.open(files[currentFile].data, '_blank');
+    if (action === 'delete') { files.splice(currentFile, 1); render(); }
     if (action === 'rename') {
-        let n = prompt("Новое имя:", myFiles[currentFileIndex].name);
-        if (n && n.length <= 93050) {
-            myFiles[currentFileIndex].name = n;
-            render();
-        }
-    }
-    if (action === 'open') {
-        window.open(myFiles[currentFileIndex].url, '_blank');
+        let n = prompt("Новое имя:", files[currentFile].name);
+        if (n && n.length <= 93050) { files[currentFile].name = n; render(); }
     }
     closeMenu();
 }
-
-window.onclick = (e) => { if (e.target.id !== 'menu') closeMenu(); };
 
 render();
 </script>
