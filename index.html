@@ -6,73 +6,60 @@
     <title>NASHA DRIVE CORE</title>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
-        header { padding: 20px; background: #111; display: flex; justify-content: space-between; border-bottom: 2px solid #007bff; }
+        header { padding: 20px; background: #111; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #007bff; }
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #222; }
-        .dots { font-size: 30px; padding: 10px; color: #666; cursor: pointer; }
+        .dots { font-size: 30px; padding: 0 15px; color: #666; cursor: pointer; }
         #menu { position: fixed; bottom: 0; left:0; width: 100%; background: #1a1a1a; border-top: 3px solid #007bff; display: none; z-index: 1000; }
-        .menu-btn { padding: 18px; text-align: center; border-bottom: 1px solid #222; cursor: pointer; font-size: 18px; }
-        .danger { color: #ff4d4d; }
+        .menu-btn { padding: 18px; text-align: center; border-bottom: 1px solid #222; font-size: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <header>
     <strong>NASHA DRIVE (15GB)</strong>
-    <input type="file" id="fileLoader" style="display:none;" onchange="startUpload(this)">
-    <button onclick="document.getElementById('fileLoader').click()" style="background:#007bff; color:#fff; border:none; padding:10px 15px; border-radius:8px; cursor:pointer;">ЗАГРУЗИТЬ ФАЙЛ</button>
+    <button onclick="addNewFile()" style="background:#007bff; color:#fff; border:none; padding:10px 15px; border-radius:8px;">+ ДОБАВИТЬ ССЫЛКУ</button>
 </header>
 
 <div id="fileList"></div>
 
 <div id="menu">
-    <div class="menu-btn" onclick="execute('open')">Открыть / Воспроизвести</div>
-    <div class="menu-btn" onclick="execute('rename')">Переименовать</div>
-    <div class="menu-btn danger" onclick="execute('delete')">Удалить</div>
+    <div class="menu-btn" onclick="execute('open')">ОТКРЫТЬ (ПЛЕЕР)</div>
+    <div class="menu-btn" onclick="execute('rename')">ПЕРЕИМЕНОВАТЬ</div>
+    <div class="menu-btn" onclick="execute('delete')" style="color:red">УДАЛИТЬ</div>
     <div class="menu-btn" onclick="closeMenu()" style="background:#000;">ОТМЕНА</div>
 </div>
 
 <script>
 let currentFile = null;
-let files = JSON.parse(localStorage.getItem('nasha_core_files')) || [];
+// Теперь храним только ссылки, чтобы ничего не ломалось и не исчезало
+let files = JSON.parse(localStorage.getItem('nasha_links')) || [];
 
 function render() {
     const list = document.getElementById('fileList');
-    list.innerHTML = files.length ? "" : '<div style="padding:50px; text-align:center; opacity:0.3;">ДИСК ПУСТ</div>';
+    list.innerHTML = files.length ? "" : '<div style="padding:50px; text-align:center; opacity:0.3;">НЕТ ФАЙЛОВ</div>';
     files.forEach((f, i) => {
-        const ext = f.name.split('.').pop().toLowerCase();
-        let icon = "📄";
-        if (['mp4','mov','avi'].includes(ext)) icon = "🎬";
-        if (['jpg','png'].includes(ext)) icon = "🖼️";
-
         let div = document.createElement('div');
         div.className = 'file-item';
         div.innerHTML = `
-            <div style="flex:1; cursor:pointer;" onclick="window.open('${f.data}','_blank')">
-                <span style="font-size:20px; margin-right:10px;">${icon}</span>
+            <div style="flex:1" onclick="executeAction('open', ${i})">
+                <span style="font-size:20px; margin-right:10px;">📦</span>
                 <span>${f.name}</span>
             </div>
             <div class="dots" onclick="openOptions(event, ${i})">⋮</div>
         `;
         list.appendChild(div);
     });
-    localStorage.setItem('nasha_core_files', JSON.stringify(files));
+    localStorage.setItem('nasha_links', JSON.stringify(files));
 }
 
-function startUpload(input) {
-    const file = input.files[0];
-    if (!file) return;
-    if (file.name.length > 93050) return alert("Лимит имени превышен!");
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        // Мы сохраняем файл в "мозги" сайта
-        files.push({
-            name: file.name,
-            data: e.target.result // Сохраняем как Base64 (чтобы не пропадал)
-        });
+function addNewFile() {
+    let name = prompt("Название файла:");
+    if (!name) return;
+    let url = prompt("Вставь ссылку на файл (из Google Диска или любую прямую):");
+    if (url && name.length <= 93050) {
+        files.push({ name: name, url: url });
         render();
-    };
-    reader.readAsDataURL(file);
+    }
 }
 
 function openOptions(e, i) {
@@ -84,11 +71,15 @@ function openOptions(e, i) {
 function closeMenu() { document.getElementById('menu').style.display = 'none'; }
 
 function execute(action) {
-    if (action === 'open') window.open(files[currentFile].data, '_blank');
+    const file = files[currentFile];
+    if (action === 'open') {
+        // Открываем файл в новой вкладке — так видео и PDF работают всегда
+        window.open(file.url, '_blank');
+    }
     if (action === 'delete') { files.splice(currentFile, 1); render(); }
     if (action === 'rename') {
-        let n = prompt("Новое имя:", files[currentFile].name);
-        if (n && n.length <= 93050) { files[currentFile].name = n; render(); }
+        let n = prompt("Новое имя:", file.name);
+        if (n && n.length <= 93050) { file.name = n; render(); }
     }
     closeMenu();
 }
