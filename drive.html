@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NASHA DRIVE - 15GB</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="drive-body">
+    <header class="drive-header">
+        <span>NASHA DRIVE (15GB)</span>
+        <button onclick="createNewFolder()" class="add-btn">+</button>
+    </header>
+
+    <main id="fileList" class="file-grid">
+        </main>
+
+    <div id="contextMenu" class="context-menu" style="display:none;">
+        <div class="menu-item" onclick="action('open')">Открыть</div>
+        <div class="menu-item" onclick="action('rename')">Переименовать</div>
+        <div class="menu-item" onclick="action('move')">Переместить</div>
+        <div class="menu-item" onclick="action('replace')">Заменить</div>
+        <div class="menu-item delete" onclick="action('delete')">Удалить</div>
+    </div>
+
+    <div class="storage-info">
+        <div class="progress-bar"><div id="usedSpace" style="width: 10%;"></div></div>
+        <a href="https://one.google.com/storage" target="_blank">Увеличить до 100ГБ+</a>
+    </div>
+
+    <script src="brain.js"></script>
+</body>
+</html>
+
