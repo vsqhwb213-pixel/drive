@@ -22,6 +22,48 @@
         <div class="menu-item" onclick="action('replace')">Заменить</div>
         <div class="menu-item delete" onclick="action('delete')">Удалить</div>
     </div>
+    function getFileInfo(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    
+    // Группы форматов
+    const types = {
+        video: ['mp4', 'mov', 'avi', 'mkv', 'webm', '3gp', 'flv'],
+        audio: ['mp3', 'wav', 'ogg', 'm4a', 'flac'],
+        image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'ico', 'bmp'],
+        doc: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'],
+        archive: ['zip', 'rar', '7z', 'tar', 'gz'],
+        code: ['txt', 'js', 'html', 'css', 'json', 'md']
+    };
+
+    if (types.video.includes(ext)) return { icon: "🎬", label: "Видео" };
+    if (types.audio.includes(ext)) return { icon: "🎵", label: "Аудио" };
+    if (types.image.includes(ext)) return { icon: "🖼️", label: "Изображение" };
+    if (types.doc.includes(ext)) return { icon: "📕", label: "Документ" };
+    if (types.archive.includes(ext)) return { icon: "📦", label: "Архив" };
+    if (types.code.includes(ext)) return { icon: "📝", label: "Текст/Код" };
+    
+    return { icon: "❓", label: "Неизвестный файл" };
+}
+
+// Функция открытия (теперь она умная)
+function openFile(index) {
+    const file = myFiles[index];
+    const info = getFileInfo(file.name);
+
+    if (file.url === "#") {
+        alert("Файл '" + file.name + "' (" + info.label + ") не имеет ссылки для загрузки.");
+        return;
+    }
+
+    // Открываем всё через встроенный просмотрщик браузера
+    // Браузер сам решит: показать PDF или включить плеер для MP4
+    const newWindow = window.open(file.url, '_blank');
+    
+    if (!newWindow) {
+        alert("Браузер заблокировал всплывающее окно. Разреши его, чтобы открыть файл!");
+    }
+}
+    
 
     <div class="storage-info">
         <div class="progress-bar"><div id="usedSpace" style="width: 10%;"></div></div>
